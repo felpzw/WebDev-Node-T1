@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Agenda Pet Shop</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .tab-button.active {
+            border-bottom-color: #0891b2; /* cyan-600 */
+            color: #0891b2;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+    <div class="container mx-auto p-4 md:p-6">
+        <header class="text-center mb-6">
+            <h1 class="text-4xl font-bold text-gray-800">Painel Administrativo</h1>
+            <p class="text-gray-500 mt-1">Gerencie a agenda e os horários do Pet Shop</p>
+        </header>
+
+        <!-- Abas de Navegação -->
+        <div class="border-b border-gray-200 mb-6">
+            <nav class="-mb-px flex space-x-6" aria-label="Tabs">
+                <button id="tab-agenda" class="tab-button active whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Agenda do Dia
+                </button>
+                <button id="tab-config" class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                    Configurar Horários
+                </button>
+            </nav>
+        </div>
+
+        <!-- Conteúdo da Aba: Agenda -->
+        <main id="content-agenda">
+            <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-4">
+                <label for="date-picker" class="block text-sm font-medium text-gray-700">Selecione uma data:</label>
+                <input type="date" id="date-picker" class="mt-1 block w-full md:w-auto rounded-md border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500">
+            </div>
+            <div id="agenda-container" class="space-y-3">
+                <!-- Agendamentos do dia serão listados aqui -->
+            </div>
+        </main>
+
+        <!-- Conteúdo da Aba: Configuração -->
+        <main id="content-config" class="hidden">
+             <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <h2 class="text-xl font-semibold mb-4">Definir Capacidade de Atendimento</h2>
+                <form id="form-config" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <div>
+                        <label for="diaSemana" class="block text-sm font-medium text-gray-700">Dia da Semana</label>
+                        <select id="diaSemana" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500">
+                            <option value="1">Segunda-feira</option>
+                            <option value="2">Terça-feira</option>
+                            <option value="3">Quarta-feira</option>
+                            <option value="4">Quinta-feira</option>
+                            <option value="5">Sexta-feira</option>
+                            <option value="6">Sábado</option>
+                            <option value="0">Domingo</option>
+                        </select>
+                    </div>
+                     <div>
+                        <label for="hora" class="block text-sm font-medium text-gray-700">Horário</label>
+                        <input type="time" id="hora" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500">
+                    </div>
+                     <div>
+                        <label for="capacidade" class="block text-sm font-medium text-gray-700">Nº de Vagas</label>
+                        <input type="number" id="capacidade" value="1" min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500">
+                    </div>
+                    <div class="md:col-span-3">
+                        <button type="submit" class="w-full bg-cyan-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500">
+                            Salvar Horário
+                        </button>
+                    </div>
+                </form>
+                <div id="config-list" class="mt-6">
+                    <h3 class="text-lg font-semibold border-t pt-4">Horários Configurados</h3>
+                    <div id="horarios-configurados-container" class="mt-2 text-sm text-gray-600"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api';
+
+        // Elementos das Abas
+        const tabAgenda = document.getElementById('tab-agenda');
+        const tabConfig = document.getElementById('tab-config');
+        const contentAgenda = document.getElementById('content-agenda');
+        const contentConfig = document.getElementById('content-config');
+
+        // Elementos da Agenda
+        const datePicker = document.getElementById('date-picker');
+        const agendaContainer = document.getElementById('agenda-container');
+
+        // Elementos da Configuração
+        const formConfig = document.getElementById('form-config');
+        const horariosConfiguradosContainer = document.getElementById('horarios-configurados-container');
+
+        // --- Lógica de Navegação por Abas ---
+        function trocarAba(ativa) {
+            if (ativa === 'agenda') {
+                tabAgenda.classList.add('active');
+                tabConfig.classList.remove('active');
+                contentAgenda.classList.remove('hidden');
+                contentConfig.classList.add('hidden');
+                carregarAgenda(datePicker.value);
+            } else {
+                tabAgenda.classList.remove('active');
+                tabConfig.classList.add('active');
+                contentAgenda.classList.add('hidden');
+                contentConfig.classList.remove('hidden');
+                carregarConfiguracoes();
+            }
+        }
+        tabAgenda.addEventListener('click', () => trocarAba('agenda'));
+        tabConfig.addEventListener('click', () => trocarAba('config'));
+
+        // --- Lógica da Agenda ---
+        function formatarDataISO(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+        
+        datePicker.value = formatarDataISO(new Date());
+        datePicker.addEventListener('change', () => carregarAgenda(datePicker.value));
+
+        async function carregarAgenda(data) {
+            if (!data) return;
+            agendaContainer.innerHTML = '<p class="animate-pulse">Buscando agendamentos...</p>';
+            try {
+                const response = await fetch(`${API_URL}/admin/agenda/${data}`);
+                if (!response.ok) throw new Error('Falha ao buscar agenda.');
+
+                const agendamentos = await response.json();
+                agendaContainer.innerHTML = '';
+                if (agendamentos.length === 0) {
+                    agendaContainer.innerHTML = '<p class="text-gray-500 text-center p-4">Nenhum agendamento para esta data.</p>';
+                    return;
+                }
+                agendamentos.forEach(ag => {
+                    const hora = new Date(ag.dataHora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    const card = document.createElement('div');
+                    card.className = 'bg-white p-4 rounded-md shadow-sm border flex justify-between items-center';
+                    card.innerHTML = `
+                        <div>
+                            <p class="font-bold text-cyan-700">${hora}</p>
+                            <p class="font-semibold text-gray-800">${ag.cliente.nome}</p>
+                            <p class="text-sm text-gray-600">Pet: ${ag.pet.nome} | Serviço: ${ag.servico}</p>
+                        </div>
+                        <div class="text-right">
+                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${ag.status === 'Agendado' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}">
+                                ${ag.status}
+                            </span>
+                        </div>
+                    `;
+                    agendaContainer.appendChild(card);
+                });
+            } catch (error) {
+                agendaContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
+            }
+        }
+        
+        // --- Lógica de Configuração ---
+        formConfig.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const dados = {
+                diaSemana: document.getElementById('diaSemana').value,
+                hora: document.getElementById('hora').value,
+                capacidade: document.getElementById('capacidade').value
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/admin/configuracao-horarios`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dados)
+                });
+                if (!response.ok) throw new Error('Falha ao salvar.');
+                alert('Horário salvo com sucesso!');
+                carregarConfiguracoes();
+            } catch (error) {
+                alert(`Erro: ${error.message}`);
+            }
+        });
+        
+        async function carregarConfiguracoes() {
+             horariosConfiguradosContainer.innerHTML = '<p class="animate-pulse">Carregando...</p>';
+             try {
+                const response = await fetch(`${API_URL}/admin/configuracao-horarios`);
+                if (!response.ok) throw new Error('Falha ao carregar configurações.');
+                const configs = await response.json();
+                
+                const dias = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+                horariosConfiguradosContainer.innerHTML = configs.map(c => 
+                    `<div class="flex justify-between p-2 border-b">
+                        <span>${dias[c.diaSemana]}, ${c.hora}</span>
+                        <span class="font-medium">${c.capacidade} vaga(s)</span>
+                    </div>`
+                ).join('');
+             } catch (error) {
+                 horariosConfiguradosContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
+             }
+        }
+
+
+        // Carregamento inicial
+        document.addEventListener('DOMContentLoaded', () => {
+             carregarAgenda(datePicker.value);
+        });
+    </script>
+
+</body>
+</html>
