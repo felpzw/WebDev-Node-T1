@@ -22,7 +22,6 @@
             <p class="text-gray-500 mt-1">Gerencie a agenda e os horários do Pet Shop</p>
         </header>
 
-        <!-- Abas de Navegação -->
         <div class="border-b border-gray-200 mb-6">
             <nav class="-mb-px flex space-x-6" aria-label="Tabs">
                 <button id="tab-agenda" class="tab-button active whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
@@ -34,14 +33,11 @@
             </nav>
         </div>
 
-        <!-- Conteúdo da Aba: Agenda -->
         <main id="content-agenda">
             <div id="agenda-container" class="space-y-3">
-                <!-- Agendamentos do dia serão listados aqui -->
-            </div>
+                </div>
         </main>
 
-        <!-- Conteúdo da Aba: Configuração -->
         <main id="content-config" class="hidden">
              <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                 <h2 class="text-xl font-semibold mb-4">Definir Capacidade de Atendimento</h2>
@@ -88,22 +84,16 @@
         const tabConfig = document.getElementById('tab-config');
         const contentAgenda = document.getElementById('content-agenda');
         const contentConfig = document.getElementById('content-config');
-
-        // Elementos da Agenda (sem datePicker)
         const agendaContainer = document.getElementById('agenda-container');
-
-        // Elementos da Configuração
         const formConfig = document.getElementById('form-config');
         const horariosConfiguradosContainer = document.getElementById('horarios-configurados-container');
 
-        // --- Lógica de Navegação por Abas ---
         function trocarAba(ativa) {
             if (ativa === 'agenda') {
                 tabAgenda.classList.add('active');
                 tabConfig.classList.remove('active');
                 contentAgenda.classList.remove('hidden');
                 contentConfig.classList.add('hidden');
-                // Chama carregarAgenda sem parâmetros
                 carregarAgenda();
             } else {
                 tabAgenda.classList.remove('active');
@@ -116,7 +106,6 @@
         tabAgenda.addEventListener('click', () => trocarAba('agenda'));
         tabConfig.addEventListener('click', () => trocarAba('config'));
 
-        // --- Lógica da Agenda ---
         async function carregarAgenda() {
             agendaContainer.innerHTML = '<p class="animate-pulse">Buscando agendamentos...</p>';
             try {
@@ -129,31 +118,75 @@
                     agendaContainer.innerHTML = '<p class="text-gray-500 text-center p-4">Nenhum agendamento encontrado.</p>';
                     return;
                 }
-                // Usamos reverse() para mostrar os mais recentes primeiro
+                
                 agendamentos.reverse().forEach(ag => {
                     const dataFormatada = new Date(ag.dataHora).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+                    
+                    const statusInfo = {
+                        'Agendado': { text: 'Agendado', bg: 'bg-blue-100', text_color: 'text-blue-800' },
+                        'Concluído': { text: 'Concluído', bg: 'bg-green-100', text_color: 'text-green-800' },
+                        'Cancelado': { text: 'Cancelado', bg: 'bg-red-100', text_color: 'text-red-800' }
+                    };
+                    const statusAtual = statusInfo[ag.status] || { text: ag.status, bg: 'bg-gray-100', text_color: 'text-gray-800' };
+
                     const card = document.createElement('div');
                     card.className = 'bg-white p-4 rounded-md shadow-sm border flex justify-between items-center';
+                    
+                    // --- ALTERAÇÃO AQUI ---
+                    // Adiciona o botão "Concluir" apenas se o status for "Agendado"
+                    const botaoConcluirHtml = ag.status === 'Agendado' 
+                        ? `<button 
+                                data-id="${ag._id}" 
+                                class="btn-concluir text-sm bg-green-500 text-white font-semibold py-1 px-3 rounded-md hover:bg-green-600 transition-colors">
+                                Concluir
+                           </button>` 
+                        : '';
+
                     card.innerHTML = `
-                    <div>
-                        <p class="font-bold text-cyan-700">${dataFormatada}</p>
-                        <p class="font-semibold text-gray-800">${ag.cliente ? ag.cliente.nome : 'Cliente não encontrado'}</p>
-                        <p class="text-sm text-gray-600">Pet: ${ag.pet.nome} (${ag.pet.raca || 'Raça não informada'}) | Serviço: ${ag.servico}</p>
-                    </div>
-                    <div class="text-right">
-                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${ag.status === 'Agendado' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}">
-                            ${ag.status}
-                        </span>
-                    </div>
-                `;
+                        <div>
+                            <p class="font-bold text-cyan-700">${dataFormatada}</p>
+                            <p class="font-semibold text-gray-800">${ag.cliente ? ag.cliente.nome : 'Cliente não encontrado'}</p>
+                            <p class="text-sm text-gray-600">Pet: ${ag.pet.nome} (${ag.pet.raca || 'Raça não informada'}) | Serviço: ${ag.servico}</p>
+                        </div>
+                        <div class="text-right space-y-2">
+                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusAtual.bg} ${statusAtual.text_color}">
+                                ${statusAtual.text}
+                            </span>
+                            <div>${botaoConcluirHtml}</div>
+                        </div>
+                    `;
                     agendaContainer.appendChild(card);
                 });
+
+                // --- ALTERAÇÃO AQUI ---
+                // Adiciona os event listeners aos novos botões de concluir
+                document.querySelectorAll('.btn-concluir').forEach(button => {
+                    button.addEventListener('click', async () => {
+                        const agendamentoId = button.dataset.id;
+                        if (!confirm('Deseja marcar este agendamento como concluído?')) return;
+
+                        try {
+                            const response = await fetch(`${API_URL}/admin/agendamentos/${agendamentoId}/status`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ status: 'Concluído' })
+                            });
+
+                            if (!response.ok) throw new Error('Falha ao atualizar o status.');
+                            
+                            alert('Agendamento concluído com sucesso!');
+                            carregarAgenda(); // Recarrega a lista para refletir a mudança
+                        } catch (error) {
+                            alert(`Erro: ${error.message}`);
+                        }
+                    });
+                });
+
             } catch (error) {
                 agendaContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
             }
         }
 
-        // --- Lógica de Configuração ---
         formConfig.addEventListener('submit', async (e) => {
             e.preventDefault();
             const dados = {
@@ -184,7 +217,6 @@
                 const configs = await response.json();
 
                 const dias = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-                // Adicionado sort para garantir a ordem
                 configs.sort((a, b) => a.diaSemana - b.diaSemana || a.hora.localeCompare(b.hora));
                 horariosConfiguradosContainer.innerHTML = configs.map(c =>
                     `<div class="flex justify-between p-2 border-b">
@@ -197,7 +229,6 @@
             }
         }
 
-        // Carrega a agenda assim que a página é aberta
         document.addEventListener('DOMContentLoaded', () => {
             carregarAgenda();
         });

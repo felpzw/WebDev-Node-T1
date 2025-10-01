@@ -1,11 +1,7 @@
 const mongoose = require('../db/conexao');
 const Schema = mongoose.Schema;
 
-/**
- * Esquema do Agendamento
- * Registra cada serviço marcado por um cliente para um pet específico
- * em uma data e hora.
- */
+
 const EsquemaAgendamento = new Schema(
   {
     cliente: {

@@ -53,7 +53,7 @@ router.get('/:id', async (req, res) => {
     res.status(500).json({ message: 'Erro ao buscar cliente.', error: error.message });
   }
 });
-
+// Nao ultilizei no front
 // ROTA: Atualizar um cliente por ID
 router.put('/:id', async (req, res) => {
   try {
