@@ -1,10 +1,7 @@
 const mongoose = require('../db/conexao');
 const Schema = mongoose.Schema;
 
-/**
- * Esquema do Cliente
- * Armazena os dados dos donos dos pets que utilizam o serviço.
- */
+
 const EsquemaCliente = new Schema(
   {
     nome: {
@@ -19,15 +16,21 @@ const EsquemaCliente = new Schema(
       trim: true,
       lowercase: true,
     },
+    cpf: {
+      type: String,
+      required: [true, 'O CPF é obrigatório.'],
+      unique: true,
+      trim: true,
+      match: [/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, 'Formato de CPF inválido. Use XXX.XXX.XXX-XX.'],
+    },
     telefone: {
       type: String,
       required: [true, 'O telefone é obrigatório.'],
       trim: true,
     },
-    // Subdocumento para armazenar informações dos pets do cliente
-    pets: [
+    historico: [
       {
-        nome: {
+        nomePet: {
           type: String,
           required: [true, 'O nome do pet é obrigatório.'],
           trim: true,
@@ -41,12 +44,21 @@ const EsquemaCliente = new Schema(
           type: String,
           trim: true,
         },
+        dataHoraAtendimento: {
+          type: Date,
+          required: [true, 'A data e hora do atendimento são obrigatórias.'],
+        },
+        servicoRealizado: {
+          type: String,
+          required: [true, 'O serviço realizado é obrigatório.'],
+          enum: ['Banho', 'Tosa', 'Banho e Tosa'],
+        },
       },
     ],
   },
   {
-    versionKey: false, // Desabilita o campo de versão __v
-    timestamps: true, // Adiciona os campos createdAt e updatedAt
+    versionKey: false,
+    timestamps: true, 
   }
 );
 

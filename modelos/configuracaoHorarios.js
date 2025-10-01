@@ -1,23 +1,18 @@
 const mongoose = require('../db/conexao');
 const Schema = mongoose.Schema;
 
-/**
- * Esquema de Configuração de Horários
- * Define o template da agenda semanal do Pet Shop, especificando a capacidade
- * de atendimento para cada dia e hora.
- */
+
 const EsquemaConfiguracaoHorarios = new Schema(
   {
     diaSemana: {
       type: Number,
       required: true,
-      min: 0, // 0 para Domingo, 1 para Segunda, ..., 6 para Sábado
+      min: 0, 
       max: 6,
     },
     hora: {
       type: String,
       required: true,
-      // Validação simples para o formato HH:MM
       match: [/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Formato de hora inválido. Use HH:MM.'],
     },
     capacidade: {

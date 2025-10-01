@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const Cliente = require('../modelos/cliente');
 
-// ROTA: Criar um novo cliente
 router.post('/', async (req, res) => {
   try {
     const novoCliente = new Cliente(req.body);
@@ -13,13 +12,32 @@ router.post('/', async (req, res) => {
   }
 });
 
-// ROTA: Listar todos os clientes
 router.get('/', async (req, res) => {
   try {
     const clientes = await Cliente.find();
     res.status(200).json(clientes);
   } catch (error) {
     res.status(500).json({ message: 'Erro ao buscar clientes.', error: error.message });
+  }
+});
+
+router.get('/cpf/:cpf', async (req, res) => {
+  try {
+    const cpfFormatado = req.params.cpf.replace(/[.\-]/g, ''); // Remove pontos e traços para busca
+    // Busca flexível por CPF com ou sem formatação
+    const cliente = await Cliente.findOne({ 
+        $or: [
+            { cpf: req.params.cpf }, 
+            { cpf: { $regex: cpfFormatado } }
+        ]
+    });
+
+    if (!cliente) {
+      return res.status(404).json({ message: 'Cliente não encontrado.' });
+    }
+    res.status(200).json(cliente);
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao buscar cliente por CPF.', error: error.message });
   }
 });
 

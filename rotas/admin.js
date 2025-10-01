@@ -3,9 +3,6 @@ const router = express.Router();
 const Agendamento = require('../modelos/agendamento');
 const ConfiguracaoHorarios = require('../modelos/configuracaoHorarios');
 
-// --- ROTAS DE CONFIGURAÇÃO DE HORÁRIOS ---
-
-// ROTA: Criar ou atualizar uma configuração de horário
 router.post('/configuracao-horarios', async (req, res) => {
   try {
     const { diaSemana, hora, capacidade } = req.body;
@@ -20,7 +17,6 @@ router.post('/configuracao-horarios', async (req, res) => {
   }
 });
 
-// ROTA: Listar todas as configurações de horários
 router.get('/configuracao-horarios', async (req, res) => {
   try {
     const configs = await ConfiguracaoHorarios.find().sort({ diaSemana: 1, hora: 1 });
@@ -30,28 +26,19 @@ router.get('/configuracao-horarios', async (req, res) => {
   }
 });
 
-// --- ROTAS DE VISUALIZAÇÃO DA AGENDA ---
 
-// ROTA: Visualizar a agenda para uma data específica
-router.get('/agenda/:data', async (req, res) => {
+router.get('/agenda', async (req, res) => {
   try {
-    const dataSelecionada = new Date(req.params.data);
-    const inicioDia = new Date(dataSelecionada.setHours(0, 0, 0, 0));
-    const fimDia = new Date(dataSelecionada.setHours(23, 59, 59, 999));
+    const todosOsAgendamentos = await Agendamento.find({}) // Busca todos os documentos
+      .populate('cliente', 'nome') // Popula com o nome do cliente
+      .sort({ dataHora: 1 }); // Ordena pela data, do mais antigo ao mais novo
 
-    const agendamentosDoDia = await Agendamento.find({
-      dataHora: { $gte: inicioDia, $lte: fimDia }
-    })
-    .populate('cliente', 'nome telefone') // Popula com nome e telefone do cliente
-    .sort({ dataHora: 1 });
-
-    res.status(200).json(agendamentosDoDia);
+    res.status(200).json(todosOsAgendamentos);
   } catch (error) {
-    res.status(500).json({ message: 'Erro ao buscar a agenda do dia.', error: error.message });
+    res.status(500).json({ message: 'Erro ao buscar a agenda.', error: error.message });
   }
 });
 
-// ROTA: Atualizar o status de um agendamento (ex: para "Concluído")
 router.patch('/agendamentos/:id/status', async (req, res) => {
     try {
         const { status } = req.body;

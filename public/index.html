@@ -36,16 +36,28 @@
                     <input type="hidden" id="dataHoraInput" name="dataHora">
                     
                     <div class="mb-4">
-                        <label for="clienteId" class="block text-sm font-medium text-gray-700">Seu ID de Cliente</label>
-                        <input type="text" id="clienteId" name="clienteId" placeholder="Cole seu ID de cliente aqui" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500" required>
-                         <p class="text-xs text-gray-500 mt-1">Ainda não tem ID? Simule com '60f8f8f8f8f8f8f8f8f8f8f8' ou cadastre-se na área de clientes.</p>
+                        <label for="clienteCpf" class="block text-sm font-medium text-gray-700">Seu CPF</label>
+                        <input type="text" id="clienteCpf" name="clienteCpf" placeholder="Digite seu CPF (ex: 123.456.789-00)"
+                        class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500"
+                        required>
+                        <p class="text-xs text-gray-500 mt-1">
+                            Ainda não tem cadastro? <a href="/clientes.html" class="text-cyan-600 hover:underline">Cadastre-se aqui</a>.
+                        </p>
                     </div>
-
+                    
                     <div class="mb-4">
                         <label for="petNome" class="block text-sm font-medium text-gray-700">Nome do Pet</label>
                         <input type="text" id="petNome" name="petNome" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500" required>
                     </div>
-                     <div class="mb-4">
+
+                    <div class="mb-4">
+                        <label for="petRaca" class="block text-sm font-medium text-gray-700">Raça do Pet</label>
+                        <input type="text" id="petRaca" name="petRaca"
+                            class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500"
+                            placeholder="Ex: Shih Tzu, SRD (Vira-lata)">
+                    </div>
+                    
+                    <div class="mb-4">
                         <label for="servico" class="block text-sm font-medium text-gray-700">Serviço</label>
                         <select id="servico" name="servico" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-cyan-500 focus:border-cyan-500">
                             <option>Banho e Tosa</option>
@@ -161,11 +173,15 @@
 
             const formData = new FormData(formAgendamento);
             const dados = {
-                cliente: formData.get('clienteId'),
-                pet: { nome: formData.get('petNome') },
+                cpf: formData.get('clienteCpf'),
+                pet: {
+                    nome: formData.get('petNome'),
+                    raca: formData.get('petRaca') // Adicione esta linha
+                },
                 dataHora: formData.get('dataHora'),
                 servico: formData.get('servico')
             };
+
 
             try {
                 const response = await fetch(`${API_URL}/agendamentos`, {

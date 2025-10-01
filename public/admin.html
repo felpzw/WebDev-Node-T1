@@ -36,10 +36,6 @@
 
         <!-- Conteúdo da Aba: Agenda -->
         <main id="content-agenda">
-            <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-4">
-                <label for="date-picker" class="block text-sm font-medium text-gray-700">Selecione uma data:</label>
-                <input type="date" id="date-picker" class="mt-1 block w-full md:w-auto rounded-md border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500">
-            </div>
             <div id="agenda-container" class="space-y-3">
                 <!-- Agendamentos do dia serão listados aqui -->
             </div>
@@ -93,8 +89,7 @@
         const contentAgenda = document.getElementById('content-agenda');
         const contentConfig = document.getElementById('content-config');
 
-        // Elementos da Agenda
-        const datePicker = document.getElementById('date-picker');
+        // Elementos da Agenda (sem datePicker)
         const agendaContainer = document.getElementById('agenda-container');
 
         // Elementos da Configuração
@@ -108,7 +103,8 @@
                 tabConfig.classList.remove('active');
                 contentAgenda.classList.remove('hidden');
                 contentConfig.classList.add('hidden');
-                carregarAgenda(datePicker.value);
+                // Chama carregarAgenda sem parâmetros
+                carregarAgenda();
             } else {
                 tabAgenda.classList.remove('active');
                 tabConfig.classList.add('active');
@@ -121,52 +117,42 @@
         tabConfig.addEventListener('click', () => trocarAba('config'));
 
         // --- Lógica da Agenda ---
-        function formatarDataISO(date) {
-            const y = date.getFullYear();
-            const m = String(date.getMonth() + 1).padStart(2, '0');
-            const d = String(date.getDate()).padStart(2, '0');
-            return `${y}-${m}-${d}`;
-        }
-        
-        datePicker.value = formatarDataISO(new Date());
-        datePicker.addEventListener('change', () => carregarAgenda(datePicker.value));
-
-        async function carregarAgenda(data) {
-            if (!data) return;
+        async function carregarAgenda() {
             agendaContainer.innerHTML = '<p class="animate-pulse">Buscando agendamentos...</p>';
             try {
-                const response = await fetch(`${API_URL}/admin/agenda/${data}`);
+                const response = await fetch(`${API_URL}/admin/agenda`);
                 if (!response.ok) throw new Error('Falha ao buscar agenda.');
 
                 const agendamentos = await response.json();
                 agendaContainer.innerHTML = '';
                 if (agendamentos.length === 0) {
-                    agendaContainer.innerHTML = '<p class="text-gray-500 text-center p-4">Nenhum agendamento para esta data.</p>';
+                    agendaContainer.innerHTML = '<p class="text-gray-500 text-center p-4">Nenhum agendamento encontrado.</p>';
                     return;
                 }
-                agendamentos.forEach(ag => {
-                    const hora = new Date(ag.dataHora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                // Usamos reverse() para mostrar os mais recentes primeiro
+                agendamentos.reverse().forEach(ag => {
+                    const dataFormatada = new Date(ag.dataHora).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
                     const card = document.createElement('div');
                     card.className = 'bg-white p-4 rounded-md shadow-sm border flex justify-between items-center';
                     card.innerHTML = `
-                        <div>
-                            <p class="font-bold text-cyan-700">${hora}</p>
-                            <p class="font-semibold text-gray-800">${ag.cliente.nome}</p>
-                            <p class="text-sm text-gray-600">Pet: ${ag.pet.nome} | Serviço: ${ag.servico}</p>
-                        </div>
-                        <div class="text-right">
-                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${ag.status === 'Agendado' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}">
-                                ${ag.status}
-                            </span>
-                        </div>
-                    `;
+                    <div>
+                        <p class="font-bold text-cyan-700">${dataFormatada}</p>
+                        <p class="font-semibold text-gray-800">${ag.cliente ? ag.cliente.nome : 'Cliente não encontrado'}</p>
+                        <p class="text-sm text-gray-600">Pet: ${ag.pet.nome} (${ag.pet.raca || 'Raça não informada'}) | Serviço: ${ag.servico}</p>
+                    </div>
+                    <div class="text-right">
+                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${ag.status === 'Agendado' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}">
+                            ${ag.status}
+                        </span>
+                    </div>
+                `;
                     agendaContainer.appendChild(card);
                 });
             } catch (error) {
                 agendaContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
             }
         }
-        
+
         // --- Lógica de Configuração ---
         formConfig.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -189,30 +175,31 @@
                 alert(`Erro: ${error.message}`);
             }
         });
-        
+
         async function carregarConfiguracoes() {
-             horariosConfiguradosContainer.innerHTML = '<p class="animate-pulse">Carregando...</p>';
-             try {
+            horariosConfiguradosContainer.innerHTML = '<p class="animate-pulse">Carregando...</p>';
+            try {
                 const response = await fetch(`${API_URL}/admin/configuracao-horarios`);
                 if (!response.ok) throw new Error('Falha ao carregar configurações.');
                 const configs = await response.json();
-                
+
                 const dias = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-                horariosConfiguradosContainer.innerHTML = configs.map(c => 
+                // Adicionado sort para garantir a ordem
+                configs.sort((a, b) => a.diaSemana - b.diaSemana || a.hora.localeCompare(b.hora));
+                horariosConfiguradosContainer.innerHTML = configs.map(c =>
                     `<div class="flex justify-between p-2 border-b">
                         <span>${dias[c.diaSemana]}, ${c.hora}</span>
                         <span class="font-medium">${c.capacidade} vaga(s)</span>
                     </div>`
                 ).join('');
-             } catch (error) {
-                 horariosConfiguradosContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
-             }
+            } catch (error) {
+                horariosConfiguradosContainer.innerHTML = `<p class="text-red-500">${error.message}</p>`;
+            }
         }
 
-
-        // Carregamento inicial
+        // Carrega a agenda assim que a página é aberta
         document.addEventListener('DOMContentLoaded', () => {
-             carregarAgenda(datePicker.value);
+            carregarAgenda();
         });
     </script>
 
